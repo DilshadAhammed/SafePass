@@ -17,6 +17,10 @@ SafePass is a command-line interface (CLI) tool developed in Python that allows 
    git clone https://github.com/your-username/SafePass.git
    cd SafePass
    ```
+2. Install the required libraries:
+   ```shell
+   pip install cryptography
+   ```
 
 ## Usage
 
