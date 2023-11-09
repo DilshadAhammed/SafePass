@@ -1,32 +1,51 @@
-import random
-import string
+from cryptography.fernet import Fernet
 import json
+import os
 
 PASSWORD_FILE = "passwords.json"
+KEY_FILE = "key.key"
 
-def generate_password(length=12):
-    characters = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(random.choice(characters) for _ in range(length))
+def generate_key():
+    return Fernet.generate_key()
 
-def save_password(account, password):
+def load_key():
+    return open(KEY_FILE, "rb").read()
+
+def save_key(key):
+    with open(KEY_FILE, "wb") as key_file:
+        key_file.write(key)
+
+def encrypt_password(password, key):
+    fernet = Fernet(key)
+    encrypted_password = fernet.encrypt(password.encode())
+    return encrypted_password
+
+def decrypt_password(encrypted_password, key):
+    fernet = Fernet(key)
+    decrypted_password = fernet.decrypt(encrypted_password).decode()
+    return decrypted_password
+
+def save_password(account, password, key):
     try:
         with open(PASSWORD_FILE, 'r') as file:
             data = json.load(file)
     except (FileNotFoundError, json.decoder.JSONDecodeError):
         data = {}
 
-    data[account] = password
+    encrypted_password = encrypt_password(password, key)
+    data[account] = encrypted_password
 
     with open(PASSWORD_FILE, 'w') as file:
         json.dump(data, file)
     print(f"Password for {account} saved successfully!")
 
-def retrieve_password(account):
+def retrieve_password(account, key):
     try:
         with open(PASSWORD_FILE, 'r') as file:
             data = json.load(file)
-            password = data.get(account)
-            if password:
+            encrypted_password = data.get(account)
+            if encrypted_password:
+                password = decrypt_password(encrypted_password, key)
                 print(f"Password for {account}: {password}")
             else:
                 print(f"No password found for {account}.")
@@ -34,6 +53,12 @@ def retrieve_password(account):
         print(f"No passwords saved yet.")
 
 def main():
+    if not os.path.exists(KEY_FILE):
+        key = generate_key()
+        save_key(key)
+    else:
+        key = load_key()
+
     print("Welcome to SafePass!")
     while True:
         print("\nMenu:")
@@ -50,10 +75,10 @@ def main():
         elif choice == "2":
             account = input("Enter account name: ")
             password = input("Enter password: ")
-            save_password(account, password)
+            save_password(account, password, key)
         elif choice == "3":
             account = input("Enter account name: ")
-            retrieve_password(account)
+            retrieve_password(account, key)
         elif choice == "4":
             print("Goodbye!")
             break
